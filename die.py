@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-__author__ = "Arana Fireheart"
+__author__ = "Federico Leon"
 
 from random import randint
 
