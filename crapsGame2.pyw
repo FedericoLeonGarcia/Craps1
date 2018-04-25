@@ -30,6 +30,7 @@ class Craps(QMainWindow) :
         self.payouts = {4: 2, 5: 1.5, 6: 1.2, 8: 1.2, 9: 1.5, 10: 1.2}
         self.bailButton.setEnabled(False)
         self.wins = 0
+        self.logging = True
         self.losses = 0
         self.bank = 1000
         self.die1 = Die()
@@ -43,6 +44,8 @@ class Craps(QMainWindow) :
         self.buttonText = "Roll"
              #          0  1  2  3  4    5    6    7    8    9    10   11   12
         self.payouts = [0, 0, 0, 0, 2.0, 1.5, 1.2, 1.0, 1.2, 1.5, 2.0, 1.0, 0]
+        if self.logging:
+            logging.info("You just roll")
 
         self.rollButton.clicked.connect(self.rollButtonClickedHandler)
         self.bailButton.clicked.connect(self.bail)
@@ -51,7 +54,8 @@ class Craps(QMainWindow) :
 
     def showSettings(self):
         settings.show()
-        logging.info("You just opended the settings")
+        if self.logging:
+            logging.info("You just opended the settings")
 
     def restart(self):
         self.wins = 0
@@ -61,7 +65,8 @@ class Craps(QMainWindow) :
         self.resultText = "You have restarted the game!!!!!"
         self.updateUI()
         self.rollingForLabel.setText("RESTART COMPLETE!!")
-        logging.info("You just restarted the game")
+        if self.logging:
+            logging.info("You just restarted the game")
 
     def bail(self):
         self.resultText = "You have decided to bail!"
@@ -69,7 +74,8 @@ class Craps(QMainWindow) :
         self.updateUI()
         self.bailButton.setEnabled(False)
         self.rollingForLabel.setText("Bailer!")
-        logging.info("You just bailed")
+        if self.logging:
+            logging.info("You just bailed")
 
 
     def __str__( self ):
@@ -157,7 +163,8 @@ class Settings(QDialog):
         diceApp.minimumBet = self.minimumBetDefault.value()
         diceApp.maximumBet = self.maximumBetDefault.value()
         print(diceApp.maximumBet)
-
+        if diceApp.logging:
+            logging.info("You just pressed The settings button")
 
 if __name__ == "__main__":
 
