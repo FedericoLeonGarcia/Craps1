@@ -2,11 +2,12 @@
 
 from die import * 
 import sys, logging
+from pickle import load, dump
 import crapsResources_rc
 from time import sleep
 from PyQt5.QtCore import pyqtSlot
 from PyQt5 import QtGui, uic
-from PyQt5.QtWidgets import  QMainWindow, QApplication, QDialog
+from PyQt5.QtWidgets import  QMainWindow, QApplication, QDialog, QMessageBox
 
 class Craps(QMainWindow) :
     """A game of Craps."""
@@ -18,8 +19,6 @@ class Craps(QMainWindow) :
 
         super().__init__(parent)
 
-        # self.logger = getLogger("federico.logger")
-        # self.appSettings = QSettings()
         self.quitCounter = 0  # used in a workaround for a QT5 Bug.
 
         uic.loadUi("Craps.ui", self)
@@ -29,10 +28,20 @@ class Craps(QMainWindow) :
         self.resultText = "You have not rolled yet."
         self.payouts = {4: 2, 5: 1.5, 6: 1.2, 8: 1.2, 9: 1.5, 10: 1.2}
         self.bailButton.setEnabled(False)
-        self.wins = 0
+
+        try:
+            with open('craps.pkl', 'rb') as crapsLol:
+                stuff = load(crapsLol)
+                print(stuff)
+                self.wins, self.losses, self.bank, self.resultText, self.total = stuff
+
+        except:
+            self.wins = 0
+            self.losses = 0
+            self.bank = 1000
+            self.resultText = "Welcme to craps mofo"
+
         self.logging = True
-        self.losses = 0
-        self.bank = 1000
         self.die1 = Die()
         self.die2 = Die()
         self.minimumBet = 1
@@ -46,6 +55,8 @@ class Craps(QMainWindow) :
         self.payouts = [0, 0, 0, 0, 2.0, 1.5, 1.2, 1.0, 1.2, 1.5, 2.0, 1.0, 0]
         if self.logging:
             logging.info("You just roll")
+
+            self.updateUI()
 
         self.rollButton.clicked.connect(self.rollButtonClickedHandler)
         self.bailButton.clicked.connect(self.bail)
@@ -149,6 +160,22 @@ class Craps(QMainWindow) :
             self.rollButton.setEnabled(False)
         self.updateUI()
 
+    def closeEvent(self, event):
+        quit_msg = "Are you sure you want to exit Craps? All changes will be saved."
+        reply = QMessageBox.question(self, 'Message', quit_msg, QMessageBox.Yes, QMessageBox.No)
+
+        self.pickleInfo = [self.wins, self.losses, self.bank, self.resultText, self.total]
+
+        if reply == QMessageBox.Yes:
+            event.accept()
+            with open("craps.pkl", 'wb') as crapsPickle:
+                dump(self.pickleInfo, crapsPickle)
+            exit()
+        else:
+            event.ignore()
+        if self.logging:
+            logging.info("Game saved")
+
 class Settings(QDialog):
     def __init__( self, parent=None ):
         """Build a game with two dice."""
@@ -167,8 +194,6 @@ class Settings(QDialog):
             logging.info("You just pressed The settings button")
 
 if __name__ == "__main__":
-
-
     app = QApplication(sys.argv)
     logger = logging.basicConfig(filename='craps.log', level=logging.INFO,
                                  format='%(asctime)s %(levelname)s Ln %(lineno)d: %(message)s',
