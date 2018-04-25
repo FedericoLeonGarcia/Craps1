@@ -1,0 +1,175 @@
+#!/usr/bin/env python
+
+from die import * 
+import sys, logging
+import crapsResources_rc
+from time import sleep
+from PyQt5.QtCore import pyqtSlot
+from PyQt5 import QtGui, uic
+from PyQt5.QtWidgets import  QMainWindow, QApplication, QDialog
+
+class Craps(QMainWindow) :
+    """A game of Craps."""
+    die1 = die2 = None
+
+    def __init__( self, parent=None ):
+        """Build a game with two dice."""
+        logging.info("INITIALIZED GAME")
+
+        super().__init__(parent)
+
+        # self.logger = getLogger("federico.logger")
+        # self.appSettings = QSettings()
+        self.quitCounter = 0  # used in a workaround for a QT5 Bug.
+
+        uic.loadUi("Craps.ui", self)
+
+        self.bidSpinBox.setRange ( 10, 100 )
+        self.bidSpinBox.setSingleStep ( 5 )
+        self.resultText = "You have not rolled yet."
+        self.payouts = {4: 2, 5: 1.5, 6: 1.2, 8: 1.2, 9: 1.5, 10: 1.2}
+        self.bailButton.setEnabled(False)
+        self.wins = 0
+        self.losses = 0
+        self.bank = 1000
+        self.die1 = Die()
+        self.die2 = Die()
+        self.minimumBet = 1
+        self.maximumBet = 1000
+        self.startingBank = 1000
+        self.total = 0
+        self.firstRoll = True
+
+        self.buttonText = "Roll"
+             #          0  1  2  3  4    5    6    7    8    9    10   11   12
+        self.payouts = [0, 0, 0, 0, 2.0, 1.5, 1.2, 1.0, 1.2, 1.5, 2.0, 1.0, 0]
+
+        self.rollButton.clicked.connect(self.rollButtonClickedHandler)
+        self.bailButton.clicked.connect(self.bail)
+        self.restartButton.clicked.connect(self.restart)
+        self.settingsBtn.clicked.connect(self.showSettings)
+
+    def showSettings(self):
+        settings.show()
+        logging.info("You just opended the settings")
+
+    def restart(self):
+        self.wins = 0
+        self.losses = 0
+        self.firstRoll = True
+        self.bank = self.startingBank
+        self.resultText = "You have restarted the game!!!!!"
+        self.updateUI()
+        self.rollingForLabel.setText("RESTART COMPLETE!!")
+        logging.info("You just restarted the game")
+
+    def bail(self):
+        self.resultText = "You have decided to bail!"
+        self.firstRoll = True
+        self.updateUI()
+        self.bailButton.setEnabled(False)
+        self.rollingForLabel.setText("Bailer!")
+        logging.info("You just bailed")
+
+
+    def __str__( self ):
+        """String representation for Dice.
+        """
+
+        return "Die1: %s\nDie2: %s" % ( str(self.die1),  str(self.die2) )
+
+    def updateUI ( self ):
+        self.die1View.setPixmap(QtGui.QPixmap( ":/" + str( self.die1.getValue() ) ) )
+        self.die2View.setPixmap(QtGui.QPixmap( ":/" + str( self.die2.getValue() ) ) )
+        self.rollingForLabel.setText("Your roll is " + str(self.total))
+        self.winsLabel.setText(str(self.wins))
+        self.lossesLabel.setText(str(self.losses))
+        self.resultsLabel.setText(str(self.resultText))
+        self.bankValue.setText("$" + str(self.bank))
+        # Add your code here to update the GUI view so it matches the game state.
+
+		# Player asked for another roll of the dice.
+    def rollButtonClickedHandler ( self ):
+        self.currentBet = self.bidSpinBox.value()
+
+        if self.currentBet > self.bank:
+            self.resultText = "You cannot bet.\n You don't have the moeny."
+            self.updateUI()
+            return
+
+        if self.currentBet > self.maximumBet:
+            self.resultText = "The bet is too high!!!!!!!!!!!"
+            self.updateUI()
+            return
+
+        if self.currentBet < self.minimumBet:
+            self.resultText = "The bet is too low!!!!!!!!!!!!!!"
+            self.updateUI()
+            return
+
+        self.die1.roll()
+        self.die2.roll()
+        self.total = self.die1.getValue() + self.die2.getValue()
+
+        if self.firstRoll:
+            if self.total == 7 or self.total == 11:
+                self.resultText = "You win."
+                self.wins += 1
+                self.bank += self.currentBet
+            elif self.total == 2 or self.total == 3:
+                self.resultText = "You lose."
+                self.losses += 1
+                self.bank -= self.currentBet
+            else:
+                self.firstRoll = False
+                self.resultText = "Roll again."
+                self.bailButton.setEnabled(True)
+                self.previousRolled = self.total
+
+        else:
+            self.bailButton.setEnabled(False)
+            if self.total == self.previousRolled:
+                self.resultText = "You win."
+                self.wins += 1
+                self.bank += self.payouts[self.total] * self.currentBet
+            else:
+                self.resultText = "You lose."
+                self.losses += 1
+                self.bank -= self.currentBet
+            self.firstRoll = True
+
+        if self.bank <= 0:
+            self.resultText = "Game Over"
+            self.rollButton.setEnabled(False)
+        self.updateUI()
+
+class Settings(QDialog):
+    def __init__( self, parent=None ):
+        """Build a game with two dice."""
+
+        super().__init__(parent)
+        uic.loadUi("Settings.ui", self)
+
+        self.buttonBox.accepted.connect(self.saveSettings)
+
+    def saveSettings(self):
+        diceApp.startingBank = self.startingBankDefault.value()
+        diceApp.minimumBet = self.minimumBetDefault.value()
+        diceApp.maximumBet = self.maximumBetDefault.value()
+        print(diceApp.maximumBet)
+
+
+if __name__ == "__main__":
+
+
+    app = QApplication(sys.argv)
+    logger = logging.basicConfig(filename='craps.log', level=logging.INFO,
+                                 format='%(asctime)s %(levelname)s Ln %(lineno)d: %(message)s',
+                                 datefmt='%m/%d/%Y %I:%M:%S %p')
+    diceApp = Craps()
+    diceApp.updateUI()
+    diceApp.show()
+    settings = Settings()
+    sys.exit(app.exec_())
+
+
